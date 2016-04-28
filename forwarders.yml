@@ -1,6 +1,8 @@
 ---
-- hosts: pbx
+- name: Hello World!
+  hosts: all
+ 
   tasks:
-    - name: check uptime
-    command: ["/bin/sh","-c"]
-    args: ["uptime"]
+ 
+  - name: Hello World!
+    shell: echo "Hi! Tower is working."
