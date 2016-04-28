@@ -1,0 +1,6 @@
+---
+- hosts: pbx
+  tasks:
+    - name: check uptime
+    command: ["/bin/sh","-c"]
+    args: ["uptime"]
