@@ -1,8 +1,14 @@
 ---
-- name: Hello World!
+- name:  Install SplunkForwarder on either RPM or Debian distros
   hosts: all
- 
-  tasks:
- 
-  - name: Hello World!
-    shell: echo "Hi! Tower is working."
+  tasks: 
+  - name: (Debian) Check if splunkforwarder is installed
+    command: dpkg-query -W splunkforwarder
+    register: splunkforwarder_check_deb
+    failed_when: splunkforwarder_check_deb.rc > 1 #Package was found. Returns the state 'failed'.
+    changed_when: splunkforwarder_check_deb.rc == 1 #Package was not found. Returns the state 'changed'
+
+  - name: (Debian) Download splunkforwarder using wget
+    command: wget -O splunkforwarder-6.4.0-f2c836328108-linux-2.6-amd64.deb 'https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=x86_64&platform=linux&version=6.4.0&product=universalforwarder&filename=splunkforwarder-6.4.0-f2c836328108-linux-2.6-amd64.deb&wget=true'
+    when: splunkforwarder_check_deb.rc == 1
+
