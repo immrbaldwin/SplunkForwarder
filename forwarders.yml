@@ -2,6 +2,7 @@
 - name:  Install SplunkForwarder on either RPM or Debian distros
   hosts: all
   tasks: 
+  
   - name: (Debian) Check if splunkforwarder is installed
     command: dpkg-query -W splunkforwarder
     register: splunkforwarder_check_deb
@@ -10,5 +11,26 @@
 
   - name: (Debian) Download splunkforwarder using wget
     command: wget -O splunkforwarder-6.4.0-f2c836328108-linux-2.6-amd64.deb 'https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=x86_64&platform=linux&version=6.4.0&product=universalforwarder&filename=splunkforwarder-6.4.0-f2c836328108-linux-2.6-amd64.deb&wget=true'
+    when: splunkforwarder_check_deb.rc == 1 #if splunkforwarder is installed, skip this
+
+  - name: (Debian) Install splunkforwarder
+    command: dpkg -i /root/splunkforwarder-6.4.0-f2c836328108-linux-2.6-amd64.deb
     when: splunkforwarder_check_deb.rc == 1
 
+
+
+
+
+
+
+
+
+#  - name: Enable boot-start
+#    command: /opt/splunkforwarder/bin/splunk enable boot-start
+
+#  - name: Start Splunk
+#    command: /opt/splunkforwarder/splunk start
+
+
+
+    
