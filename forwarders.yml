@@ -116,15 +116,3 @@
 
   - shell: echo "[target-broker:deploymentServer]" > /opt/splunkforwarder/etc/apps/splunk_ds/local/deploymentclient.conf
   - shell: echo "targetUri= 10.1.100.2:8089" >> /opt/splunkforwarder/etc/apps/splunk_ds/local/deploymentclient.conf
-
-
-
-#  - name: Check if directory exists
-#    command: ls /opt/splunkforwarder/etc/apps/splunk-DS/local/
-#    register: invalid_directory
-#    ignore_errors: True
-
- 
-#  - name: Make path for deploymentclient.conf
-#    command: mkdir -p /opt/splunkforwarder/etc/apps/nms-DS/local   
-#    when: invalid_directory.rc == 2 
