@@ -1,36 +1,130 @@
 ---
 - name:  Install SplunkForwarder on either RPM or Debian distros
   hosts: all
-  tasks: 
-  
+
+
+  vars:
+    deb_file: "{{ lookup('pipe', 'ls *.deb') }}"
+    rpm_file: "{{ lookup('pipe', 'ls *.rpm') }}"
+
+  tasks:
+
+#Primary scan
+
+  #Check if Splunkforwarder is installed
   - name: (Debian) Check if splunkforwarder is installed
     command: dpkg-query -W splunkforwarder
     register: splunkforwarder_check_deb
-    failed_when: splunkforwarder_check_deb.rc > 1 #Package was found. Returns the state 'failed'.
-    changed_when: splunkforwarder_check_deb.rc == 1 #Package was not found. Returns the state 'changed'
+    ignore_errors: True
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
-  - name: (Debian) Download splunkforwarder using wget
-    command: wget -O splunkforwarder-6.4.0-f2c836328108-linux-2.6-amd64.deb 'https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=x86_64&platform=linux&version=6.4.0&product=universalforwarder&filename=splunkforwarder-6.4.0-f2c836328108-linux-2.6-amd64.deb&wget=true'
-    when: splunkforwarder_check_deb.rc == 1 #if splunkforwarder is installed, skip this
+  #Check if /opt/splunkforwarder exists. This directory errors the enable boot-start
+  - name: Check if /opt/splunkfowarder/ exists
+    command: ls /opt/splunkforwarder/
+    register: opt_directory
+    ignore_errors: True
 
-  - name: (Debian) Install splunkforwarder
-    command: dpkg -i /root/splunkforwarder-6.4.0-f2c836328108-linux-2.6-amd64.deb
-    when: splunkforwarder_check_deb.rc == 1
+  #Check splunkd status
+  - name: Check splunkd status
+    stat: path=/opt/splunkforwarder/bin/splunkd
+    register: splunkd_status
+    ignore_errors: True
+    when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+ 
+##Adjust, based on Primary scan
+ 
+  #When splunkforwarder is NOT installed and /opt/splunkforwarder IS installed, remove the directory
+  - name: Remove old /opt/splunkforwarder directory
+    command: rm -rf /opt/splunkforwarder
+    when: (splunkforwarder_check_deb.rc == 1 and opt_directory.rc == 0)
 
+  #When splunkforwarder is installed, but /opt/splunkforwarder is not
+  - name: Uninstall forwarder
+    command: "{{item}}"
+    with_items:
+      - apt-get purge splunkforwarder -y
+      - pkill splunkd
+    ignore_errors: True
+    when: (opt_directory.rc == 2 and splunkforwarder_check_deb.rc == 0)
 
+  #Kill any rogue splunkd services
+  - name: If Splunk is not configured, kill any potential daemons
+    command: pkill splunkd
+    register: kill_splunkd
+    ignore_errors: True
+    when: (splunkforwarder_check_deb.rc == 1)
 
+## Secondary scan
 
+  #Check if Splunkforwarder is installed
+  - name: (Debian) Check if splunkforwarder is installed
+    command: dpkg-query -W splunkforwarder
+    register: splunkforwarder_check_deb
+    ignore_errors: True
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
+  #Check if /opt/splunkforwarder exists. This directory errors the enable boot-start
+  - name: Check if /opt/splunkfowarder/ exists
+    command: ls /opt/splunkforwarder/
+    register: opt_directory
+    ignore_errors: True
 
+  #Check splunkd status
+  - name: Check splunkd status
+    stat: path=/opt/splunkforwarder/bin/splunkd
+    register: splunkd_status
+    ignore_errors: True
+    when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
 
+## 
 
-
-#  - name: Enable boot-start
-#    command: /opt/splunkforwarder/bin/splunk enable boot-start
-
-#  - name: Start Splunk
-#    command: /opt/splunkforwarder/splunk start
-
-
-
+  #Copies the deb file to the remote host IF splunkforwarder is not installed
+  - name: copy deb file
+    copy: src="{{deb_file}}" dest=/root/
+    when: (splunkforwarder_check_deb.rc == 1) and
+          (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
     
+  #Copies the rpm file to the remote host
+#  - name: copy rpm file
+#    copy: src="{{rpm_file}}" dest=/root/
+#    when: (splunkforwarder_check_rpm.rc == 1) and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+
+  #Install forwarder IF it is not already installed
+  - name: (Debian) Install splunkforwarder
+    command: dpkg -i {{deb_file}}
+    when: (splunkforwarder_check_deb.rc == 1 ) and 
+          (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+
+  #Enable boot start and accept license
+  - name: Enable boot-start
+    command:  /opt/splunkforwarder/bin/splunk enable boot-start --accept-license
+    when: (splunkforwarder_check_deb.rc == 1 ) and
+          (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+
+  - name: Start Splunk
+    command: /opt/splunkforwarder/bin/splunk start --accept-license
+    when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+
+##Splunk is installed, not add config
+
+  #Make directory for deploymentclient.conf
+  - name: build path for deploymentclient.conf
+    command: "{{item}}"
+    with_items:
+      - mkdir -p /opt/splunkforwarder/etc/apps/splunk_ds/local/
+      - touch /opt/splunkforwarder/etc/apps/splunk_ds/local/deploymentclient.conf
+
+  - shell: echo "[target-broker:deploymentServer]" > /opt/splunkforwarder/etc/apps/splunk_ds/local/deploymentclient.conf
+  - shell: echo "targetUri= 10.1.100.2:8089" >> /opt/splunkforwarder/etc/apps/splunk_ds/local/deploymentclient.conf
+
+
+
+#  - name: Check if directory exists
+#    command: ls /opt/splunkforwarder/etc/apps/splunk-DS/local/
+#    register: invalid_directory
+#    ignore_errors: True
+
+ 
+#  - name: Make path for deploymentclient.conf
+#    command: mkdir -p /opt/splunkforwarder/etc/apps/nms-DS/local   
+#    when: invalid_directory.rc == 2 
