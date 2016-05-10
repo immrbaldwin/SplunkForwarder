@@ -1,11 +1,11 @@
 ---
 - name:  Install SplunkForwarder on either RPM or Debian distros
-  hosts: all
+  hosts: pbx
 
 
   vars:
     deb_file: "{{ lookup('pipe', 'ls *.deb') }}"
-    rpm_file: "{{ lookup('pipe', 'ls *.rpm') }}"
+#    rpm_file: "{{ lookup('pipe', 'ls /tmp/*.rpm') }}"
 
   tasks:
 
@@ -80,18 +80,18 @@
 
   #Copies the deb file to the remote host IF splunkforwarder is not installed
   - name: copy deb file
-    copy: src="{{deb_file}}" dest=/root/
+    copy: src="{{deb_file}}" dest=/tmp/
     when: (splunkforwarder_check_deb.rc == 1) and
           (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
     
   #Copies the rpm file to the remote host
 #  - name: copy rpm file
-#    copy: src="{{rpm_file}}" dest=/root/
+#    copy: src="{{rpm_file}}" dest=/tmp/
 #    when: (splunkforwarder_check_rpm.rc == 1) and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
 
   #Install forwarder IF it is not already installed
   - name: (Debian) Install splunkforwarder
-    command: dpkg -i {{deb_file}}
+    command: dpkg -i /tmp/{{deb_file}}
     when: (splunkforwarder_check_deb.rc == 1 ) and 
           (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
 

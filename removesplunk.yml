@@ -1,0 +1,15 @@
+---
+- name:  Delete SplunkForwarder on either RPM or Debian distros
+  hosts: all
+  tasks: 
+  
+  - name: Purge Splunk
+    command: apt-get purge splunkforwarder -y
+    register: purge
+    ignore_errors: True
+
+  - name: Remove /opt/splunkforwarder
+    command: rm -rf /opt/splunkforwarder/
+
+  - name: Kill daemon
+    command: pkill splunkd 
