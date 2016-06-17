@@ -1,11 +1,12 @@
 ---
 - name:  Install SplunkForwarder on either RPM or Debian distros
-  hosts: pbx
-
-
+  hosts: server
+  become: yes
+  become_method: su
   vars:
     deb_file: "{{ lookup('pipe', 'ls *.deb') }}"
 #    rpm_file: "{{ lookup('pipe', 'ls /tmp/*.rpm') }}"
+  remote_user: aaron
 
   tasks:
 

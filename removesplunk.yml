@@ -1,6 +1,8 @@
 ---
 - name:  Delete SplunkForwarder on either RPM or Debian distros
   hosts: all
+  become: yes
+  become_method: su
   tasks: 
   
   - name: Purge Splunk
